@@ -24,6 +24,8 @@ library(rlist)
 source("api_key.R")
 ```
 
+# Task 3
+
 ```{r GET request}
 response <- GET(url = "https://app.ticketmaster.com/discovery/v2/venues",
     query = list(apikey = tm_api_key,
@@ -35,20 +37,80 @@ response <- GET(url = "https://app.ticketmaster.com/discovery/v2/venues",
 ```{r}
 content_json <- content(response, as = "text")
 content <- fromJSON(content_json)
-x <-content[["_embedded"]] 
-venues <- x[["venues"]]
+venues <-content[["_embedded"]]
+venues <- venues[["venues"]]
 venues_select <- venues %>% 
   select(name, city, postalCode, address, url, location)
 glimpse(venues_select)
 
 venue_data <- venues_select %>% 
   select(is.vector)
-venue_data["city"] <- venues_select[["city"]]
-venue_data["address"] <- venues_select[["address"]]
+venue_data["city"] <- venues_select$city[["name"]]
+venue_data["address"] <- venues_select$address[["line1"]]
 venue_data["longitude"] <- venues_select$location["longitude"]
 venue_data["latitude"] <- venues_select$location["latitude"]
 
 
 glimpse(venue_data)
+```
+
+# Task 4
+
+```{r}
+total_pages <- content$page$totalPages
+total_elements <- total_pages * 20
+
+
+n <- total_elements
+
+venue_data_complete <-
+  data.frame(
+    name = character(n),
+    city = character(n),
+    postalCode = character(n),
+    address = character(n),
+    url = character(n),
+    # longitude = character(n),
+    # latitude = character(n),
+    stringsAsFactors = FALSE
+  )
+venue_data <-
+  data.frame(
+    name = character(20),
+    city = character(20),
+    postalCode = character(20),
+    address = character(20),
+    url = character(20),
+    # longitude = character(n),
+    # latitude = character(n),
+    stringsAsFactors = FALSE
+  )
+
+
+# venue_data_complete <- matrix(nrow = total_elements,
+#                               ncol = n_cols-2)
+# colnames(venue_data_complete) <- colnames(venue_data)
+
+for (i in 50){
+  response <- GET(url = "https://app.ticketmaster.com/discovery/v2/venues",
+    query = list(apikey = tm_api_key,
+                 countryCode = "DE",
+                 size = 20,
+                 page = i))
+  
+  content_json <- content(response, as = "text")
+  content <- fromJSON(content_json)
+  assign(paste0("venues",i),content[["_embedded"]]$venues)
+  # venues <- content[["_embedded"]]$venues
+  # venue_data["name"] <- venues[["name"]]
+  # venue_data["postalCode"] <- venues[["postalCode"]]
+  # venue_data["url"] <- venues[["url"]]
+  # venue_data["city"] <- venues$city[["name"]]
+  # venue_data["address"] <- venues$address[["line1"]]
+  # venue_data["longitude"] <- venues_select$location["longitude"]
+  # venue_data["latitude"] <- venues_select$location["latitude"]
+  # venue_data_complete[((i-1)*20 + 1) : (i * 20), ] <- venue_data
+  Sys.sleep(1)
+}
 ```
 
