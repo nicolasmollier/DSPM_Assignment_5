@@ -1,0 +1,54 @@
+---
+title: "Assignment_5"
+author: "Nicolas Mollier"
+date: "2/2/2021"
+output: html_document
+---
+
+```{r Working Directory, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/home/nicolas/Desktop/Uni/WiSe20_21/DS400_DS_Project_Management/Assignments/Assignment_5")
+setwd("/home/nicolas/Desktop/Uni/WiSe20_21/DS400_DS_Project_Management/Assignments/Assignment_5")
+```
+
+```{r Packages}
+library(tidyverse)
+library(knitr)
+library(jsonlite)
+library(httr)
+library(rlist)
+```
+
+
+```{r API key}
+source("api_key.R")
+```
+
+```{r GET request}
+response <- GET(url = "https://app.ticketmaster.com/discovery/v2/venues",
+    query = list(apikey = tm_api_key,
+                 countryCode = "DE"))
+# y <- GET(url = "https://app.ticketmaster.com/discovery/v2/venues",
+#     query = list(apikey = tm_api_key))
+```
+
+```{r}
+content_json <- content(response, as = "text")
+content <- fromJSON(content_json)
+x <-content[["_embedded"]] 
+venues <- x[["venues"]]
+venues_select <- venues %>% 
+  select(name, city, postalCode, address, url, location)
+glimpse(venues_select)
+
+venue_data <- venues_select %>% 
+  select(is.vector)
+venue_data["city"] <- venues_select[["city"]]
+venue_data["address"] <- venues_select[["address"]]
+venue_data["longitude"] <- venues_select$location["longitude"]
+venue_data["latitude"] <- venues_select$location["latitude"]
+
+
+glimpse(venue_data)
+```
+
