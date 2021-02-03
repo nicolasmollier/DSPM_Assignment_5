@@ -195,3 +195,169 @@ ggplot() +
   theme(title = element_text(size=8, face='bold'),
     plot.caption = element_text(face = "italic")) 
 ```
+
+
+
+
+
+# Task 6) Event locations in Belgium
+
+```{r}
+country_code = "BE"
+```
+
+
+
+```{r GET request}
+response <- GET(url = "https://app.ticketmaster.com/discovery/v2/venues",
+    query = list(apikey = tm_api_key,
+                 countryCode = country_code,
+                 size = page_size))
+```
+
+
+```{r}
+content_json <- content(response, as = "text")
+content <- fromJSON(content_json)
+venues <-content[["_embedded"]]
+venues <- venues[["venues"]]
+venues_select <- venues %>% 
+  select(name, city, postalCode, address, url, location)
+glimpse(venues_select)
+
+venue_data <- venues_select %>% 
+  select(is.vector)
+venue_data["city"] <- venues_select$city[["name"]]
+venue_data["address"] <- venues_select$address[["line1"]]
+venue_data["longitude"] <- venues_select$location["longitude"]
+venue_data["latitude"] <- venues_select$location["latitude"]
+
+
+glimpse(venue_data)
+```
+
+
+```{r}
+total_pages <- content$page$totalPages
+n <- content$page$totalElements
+
+venue_data_complete <-
+  data.frame(
+    name = character(n),
+    city = character(n),
+    postalCode = character(n),
+    address = character(n),
+    url = character(n),
+    longitude = numeric(n),
+    latitude = numeric(n),
+    stringsAsFactors = FALSE
+  )
+venue_data <-
+  data.frame(
+    name = character(page_size),
+    city = character(page_size),
+    postalCode = character(page_size),
+    address = character(page_size),
+    url = character(page_size),
+    longitude = numeric(page_size),
+    latitude = numeric(page_size),
+    stringsAsFactors = FALSE
+  )
+
+
+for(i in 0:(total_pages-1)){
+  response <- GET(url = "https://app.ticketmaster.com/discovery/v2/venues",
+    query = list(apikey = tm_api_key,
+                 countryCode = country_code,
+                 size = page_size,
+                 page = i))
+  content_json <- content(response, as = "text")
+  content <- fromJSON(content_json)
+  content_embedded <- content[["_embedded"]]
+  assign(paste0("venues",i), content_embedded[["venues"]])
+  venues <- content_embedded[["venues"]]
+  
+  # as long as we have not reached the last page, we insert data frames 
+  # with 100 cases into venue_data_complete
+  if(i < (total_pages-1)){
+    venue_data["name"] <- venues[["name"]]
+    venue_data["postalCode"] <- venues[["postalCode"]]
+    venue_data["url"] <- venues[["url"]]
+    venue_data["city"] <- venues$city[["name"]]
+    venue_data["address"] <- venues$address[["line1"]]
+    venue_data["longitude"] <- as.double(venues$location[["longitude"]])
+    venue_data["latitude"] <- as.double(venues$location[["latitude"]])
+    venue_data <- venue_data %>% 
+      select(name, city, postalCode, address, url, longitude, latitude)
+    venue_data_complete[(i*page_size + 1) : ((i+1) * page_size), ] <- venue_data
+    print(i)
+    Sys.sleep(1/5)
+  # as soon as we reach the last page, the number of rows to be inserted into
+  # venue_data_complete reduces to n %% 100 (the remainder of the division of
+  # the total number of elements and the page size)
+  } else{
+    venue_data <- data.frame(
+      name = character(n%%page_size),
+      city = character(n%%page_size),
+      postalCode = character(n%%page_size),
+      address = character(n%%page_size),
+      url = character(n%%page_size),
+      longitude = numeric(n%%page_size),
+      latitude = numeric(n%%page_size),
+      stringsAsFactors = FALSE
+      )
+    
+    venue_data["name"] <- venues[["name"]]
+    venue_data["postalCode"] <- venues[["postalCode"]]
+    venue_data["url"] <- venues[["url"]]
+    venue_data["city"] <- venues$city[["name"]]
+    venue_data["address"] <- venues$address[["line1"]]
+    venue_data["longitude"] <- as.double(venues$location[["longitude"]])
+    venue_data["latitude"] <- as.double(venues$location[["latitude"]])
+    venue_data <- venue_data %>% 
+      select(name, city, postalCode, address, url, longitude, latitude)
+    
+    venue_data_complete[(i*page_size + 1) : (i*page_size + n%%page_size), ] <- venue_data
+    print("final iteration")
+    Sys.sleep(1/5)
+  }
+}
+
+```
+
+
+
+```{r}
+venue_data_complete %>% 
+  glimpse()
+
+
+max_lat_be <- 51.4570
+min_lat_be <- 49.8209
+min_long_be <- 2.5804
+max_long_be <- 6.4033
+
+max_lat_uk <- 60.85
+min_lat_uk <- 49.85
+min_long_uk <- -13.683333
+max_long_uk <- 1.766667
+
+venue_data_complete <- venue_data_complete %>% 
+  filter(longitude < max_long_be, longitude > min_long_be,
+         latitude < max_lat_be, latitude > min_lat_be)
+
+venue_data_complete %>% 
+  count(city) %>% 
+  arrange(desc(n)) %>% 
+  head()
+
+ggplot() +
+  geom_polygon(
+    aes(x = long, y = lat, group = group), data = map_data("world", region = "Belgium"),
+    fill = "gray90",color = "black") +
+  geom_point(data = venue_data_complete, aes(longitude, latitude), color = "royalblue3") +
+  theme_void() + coord_quickmap() +
+  labs(title = paste("Event locations across ", country_code), caption = "Source: ticketmaster.com") +
+  theme(title = element_text(size=8, face='bold'),
+    plot.caption = element_text(face = "italic")) 
+```
