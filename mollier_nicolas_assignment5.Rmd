@@ -5,6 +5,11 @@ date: "2/2/2021"
 output: html_document
 ---
 
+```{r}
+rm(list = ls())
+```
+
+
 ```{r Working Directory, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = "/home/nicolas/Desktop/Uni/WiSe20_21/DS400_DS_Project_Management/Assignments/Assignment_5")
@@ -26,13 +31,20 @@ source("api_key.R")
 
 # Task 3
 
+```{r}
+country_code = "DE"
+page_size = 100
+```
+
+
 ```{r GET request}
 response <- GET(url = "https://app.ticketmaster.com/discovery/v2/venues",
     query = list(apikey = tm_api_key,
-                 countryCode = "DE"))
-# y <- GET(url = "https://app.ticketmaster.com/discovery/v2/venues",
-#     query = list(apikey = tm_api_key))
+                 countryCode = country_code,
+                 size = page_size))
+
 ```
+
 
 ```{r}
 content_json <- content(response, as = "text")
@@ -51,17 +63,18 @@ venue_data["longitude"] <- venues_select$location["longitude"]
 venue_data["latitude"] <- venues_select$location["latitude"]
 
 
-glimpse(venue_data)
+venue_data %>% 
+  head(20) %>% 
+  glimpse()
 ```
+
 
 # Task 4
 
+
 ```{r}
 total_pages <- content$page$totalPages
-total_elements <- total_pages * 20
-
-
-n <- total_elements
+n <- content$page$totalElements
 
 venue_data_complete <-
   data.frame(
@@ -70,47 +83,81 @@ venue_data_complete <-
     postalCode = character(n),
     address = character(n),
     url = character(n),
-    # longitude = character(n),
-    # latitude = character(n),
+    longitude = numeric(n),
+    latitude = numeric(n),
     stringsAsFactors = FALSE
   )
 venue_data <-
   data.frame(
-    name = character(20),
-    city = character(20),
-    postalCode = character(20),
-    address = character(20),
-    url = character(20),
-    # longitude = character(n),
-    # latitude = character(n),
+    name = character(page_size),
+    city = character(page_size),
+    postalCode = character(page_size),
+    address = character(page_size),
+    url = character(page_size),
+    longitude = numeric(page_size),
+    latitude = numeric(page_size),
     stringsAsFactors = FALSE
   )
 
 
-# venue_data_complete <- matrix(nrow = total_elements,
-#                               ncol = n_cols-2)
-# colnames(venue_data_complete) <- colnames(venue_data)
-
-for (i in 50){
+for(i in 0:(total_pages-1)){
   response <- GET(url = "https://app.ticketmaster.com/discovery/v2/venues",
     query = list(apikey = tm_api_key,
-                 countryCode = "DE",
-                 size = 20,
+                 countryCode = country_code,
+                 size = page_size,
                  page = i))
-  
   content_json <- content(response, as = "text")
   content <- fromJSON(content_json)
-  assign(paste0("venues",i),content[["_embedded"]]$venues)
-  # venues <- content[["_embedded"]]$venues
-  # venue_data["name"] <- venues[["name"]]
-  # venue_data["postalCode"] <- venues[["postalCode"]]
-  # venue_data["url"] <- venues[["url"]]
-  # venue_data["city"] <- venues$city[["name"]]
-  # venue_data["address"] <- venues$address[["line1"]]
-  # venue_data["longitude"] <- venues_select$location["longitude"]
-  # venue_data["latitude"] <- venues_select$location["latitude"]
-  # venue_data_complete[((i-1)*20 + 1) : (i * 20), ] <- venue_data
-  Sys.sleep(1)
+  content_embedded <- content[["_embedded"]]
+  assign(paste0("venues",i), content_embedded[["venues"]])
+  venues <- content_embedded[["venues"]]
+  
+  # as long as we have not reached the last page, we insert data frames 
+  # with 100 cases into venue_data_complete
+  if(i < (total_pages-1)){
+    venue_data["name"] <- venues[["name"]]
+    venue_data["postalCode"] <- venues[["postalCode"]]
+    venue_data["url"] <- venues[["url"]]
+    venue_data["city"] <- venues$city[["name"]]
+    venue_data["address"] <- venues$address[["line1"]]
+    venue_data["longitude"] <- as.double(venues$location[["longitude"]])
+    venue_data["latitude"] <- as.double(venues$location[["latitude"]])
+    venue_data <- venue_data %>% 
+      select(name, city, postalCode, address, url, longitude, latitude)
+    venue_data_complete[(i*page_size + 1) : ((i+1) * page_size), ] <- venue_data
+    print(i)
+    Sys.sleep(1/5)
+  # as soon as we reach the last page, the number of rows to be inserted into
+  # venue_data_complete reduces to n %% 100 (the remainder of the division of
+  # the total number of elements and the page size)
+  } else{
+    venue_data <- data.frame(
+      name = character(n%%page_size),
+      city = character(n%%page_size),
+      postalCode = character(n%%page_size),
+      address = character(n%%page_size),
+      url = character(n%%page_size),
+      longitude = numeric(n%%page_size),
+      latitude = numeric(n%%page_size),
+      stringsAsFactors = FALSE
+      )
+    
+    venue_data["name"] <- venues[["name"]]
+    venue_data["postalCode"] <- venues[["postalCode"]]
+    venue_data["url"] <- venues[["url"]]
+    venue_data["city"] <- venues$city[["name"]]
+    venue_data["address"] <- venues$address[["line1"]]
+    venue_data["longitude"] <- as.double(venues$location[["longitude"]])
+    venue_data["latitude"] <- as.double(venues$location[["latitude"]])
+    venue_data <- venue_data %>% 
+      select(name, city, postalCode, address, url, longitude, latitude)
+    
+    venue_data_complete[(i*page_size + 1) : (i*page_size + n%%page_size), ] <- venue_data
+    print("final iteration")
+    Sys.sleep(1/5)
+  }
 }
+
 ```
+
 
