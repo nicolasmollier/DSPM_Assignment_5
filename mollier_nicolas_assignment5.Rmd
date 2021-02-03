@@ -161,3 +161,37 @@ for(i in 0:(total_pages-1)){
 ```
 
 
+# Task 5) Visualizing the extracted data
+
+```{r}
+venue_data_complete %>% 
+  glimpse()
+
+n_non_missing <- venue_data_complete %>% 
+  na.omit() %>% 
+  nrow()
+
+max_lat_de <- 55.0846
+min_lat_de <- 47.271679
+min_long_de <- 5.866944
+max_long_de <- 15.043611
+
+venue_data_complete <- venue_data_complete %>% 
+  filter(longitude < max_long_de, longitude > min_long_de,
+         latitude < max_lat_de, latitude > min_lat_de)
+
+venue_data_complete %>% 
+  count(city) %>% 
+  arrange(desc(n)) %>% 
+  head()
+
+ggplot() +
+  geom_polygon(
+    aes(x = long, y = lat, group = group), data = map_data("world", region = "Germany"),
+    fill = "gray90",color = "black") +
+  geom_point(data = venue_data_complete, aes(longitude, latitude), color = "royalblue3") +
+  theme_void() + coord_quickmap() +
+  labs(title = "Event locations across Germany", caption = "Source: ticketmaster.com") +
+  theme(title = element_text(size=8, face='bold'),
+    plot.caption = element_text(face = "italic")) 
+```
