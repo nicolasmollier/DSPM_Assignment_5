@@ -37,11 +37,12 @@ page_size = 100
 ```
 
 
-```{r GET request}
+```{r GET request 1}
 response <- GET(url = "https://app.ticketmaster.com/discovery/v2/venues",
     query = list(apikey = tm_api_key,
                  countryCode = country_code,
-                 size = page_size))
+                 size = page_size,
+                 locale = '*'))
 
 ```
 
@@ -105,7 +106,8 @@ for(i in 0:(total_pages-1)){
     query = list(apikey = tm_api_key,
                  countryCode = country_code,
                  size = page_size,
-                 page = i))
+                 page = i,
+                 locale = '*'))
   content_json <- content(response, as = "text")
   content <- fromJSON(content_json)
   content_embedded <- content[["_embedded"]]
@@ -126,7 +128,7 @@ for(i in 0:(total_pages-1)){
       select(name, city, postalCode, address, url, longitude, latitude)
     venue_data_complete[(i*page_size + 1) : ((i+1) * page_size), ] <- venue_data
     print(i)
-    Sys.sleep(1/5)
+    Sys.sleep(2/5)
   # as soon as we reach the last page, the number of rows to be inserted into
   # venue_data_complete reduces to n %% 100 (the remainder of the division of
   # the total number of elements and the page size)
@@ -154,7 +156,7 @@ for(i in 0:(total_pages-1)){
     
     venue_data_complete[(i*page_size + 1) : (i*page_size + n%%page_size), ] <- venue_data
     print("final iteration")
-    Sys.sleep(1/5)
+    Sys.sleep(2/5)
   }
 }
 
@@ -208,11 +210,14 @@ country_code = "BE"
 
 
 
-```{r GET request}
+```{r GET request 2}
+
 response <- GET(url = "https://app.ticketmaster.com/discovery/v2/venues",
     query = list(apikey = tm_api_key,
                  countryCode = country_code,
-                 size = page_size))
+                 size = page_size,
+                 locale = '*'))
+
 ```
 
 
@@ -291,7 +296,7 @@ for(i in 0:(total_pages-1)){
       select(name, city, postalCode, address, url, longitude, latitude)
     venue_data_complete[(i*page_size + 1) : ((i+1) * page_size), ] <- venue_data
     print(i)
-    Sys.sleep(1/5)
+    Sys.sleep(2/5)
   # as soon as we reach the last page, the number of rows to be inserted into
   # venue_data_complete reduces to n %% 100 (the remainder of the division of
   # the total number of elements and the page size)
@@ -319,7 +324,7 @@ for(i in 0:(total_pages-1)){
     
     venue_data_complete[(i*page_size + 1) : (i*page_size + n%%page_size), ] <- venue_data
     print("final iteration")
-    Sys.sleep(1/5)
+    Sys.sleep(2/5)
   }
 }
 
