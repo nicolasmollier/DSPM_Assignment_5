@@ -92,6 +92,10 @@ venue_data %>%
 
 # Task 4
 
+A look at the list element `page` in the object `content` reveals that we extracted 100 venues out of 12238 from 123 pages with at most 100 venues each. We can extract the venues from all the pages available by looping through them. In order to do this, we write a for loop that starts with the query parameter `page` set to 0 and increases the value after each iteration until we reach the last page. Since the first page has the index 0, we need to start the iteration through all pages at `page = 0`. The parameter `locale` is set to `'*'` to make sure that we retrieve all German venues.
+
+
+We start by extracting the total number of pages for Germany and save it as `total_pages`. The total number of venues (elements) is saved  as `n`. After that, two data frames are created. `venue_data_complete` will hold all venues from all the pages of venues in Germany. Therefore, we initialize it with variables (columns) of lengths `n`. The data frame `venue_data` is just a temporary data frame to hold the elements of the respective page in the respective iteration of the loop.
 
 ```{r}
 total_pages <- content$page$totalPages
@@ -119,8 +123,11 @@ venue_data <-
     latitude = numeric(page_size),
     stringsAsFactors = FALSE
   )
+```
 
+We start the iteration at page 0 and end it at page `r total_pages - 1`. In each iteration, we use the same GET request that we used above, except that now the parameter `page` is set to the respective page in each iteration. The extraction of the variables of interest from the `response` object is done in the same way as well. The if statement is needed to accommodate the fact that the last page generally does not have 100 but less elements. As long as we are not at the last page, we obtain a temporary data frame called `venue_data` with 100 rows that contains the seven variables. For the last page, the initialization of this temporary data frame `venue_data` is different, since the number of rows has to be adapted to the number of cases in the last page. We can get the necessary row number by calculating the remainder of the division of the total number of elements and the page size (here: 100) (`n %% page_size`). The result of this loop is a data frame called `venue_data_complete` that contains every German venue. 
 
+```{r}
 for(i in 0:(total_pages-1)){
   response <- GET(url = "https://app.ticketmaster.com/discovery/v2/venues",
     query = list(apikey = tm_api_key,
@@ -145,8 +152,9 @@ for(i in 0:(total_pages-1)){
     venue_data["latitude"] <- as.double(venues$location[["latitude"]])
     venue_data <- venue_data %>% 
       select(name, city, postalCode, address, url, longitude, latitude)
+    # put the content of the temporary data frame in the right spot in venue_data_complete 
     venue_data_complete[(i*page_size + 1) : ((i+1) * page_size), ] <- venue_data
-    print(paste("Page:", i+1, "| Progress:", scales::percent(i/total_pages), sep = " "))
+    # print(paste("Page:", i+1, "| Progress:", scales::percent(i/total_pages), sep = " "))
     Sys.sleep(1/5)
   # as soon as we reach the last page, the number of rows to be inserted into
   # venue_data_complete reduces to n %% 100 (the remainder of the division of
@@ -172,25 +180,29 @@ for(i in 0:(total_pages-1)){
     venue_data["latitude"] <- as.double(venues$location[["latitude"]])
     venue_data <- venue_data %>% 
       select(name, city, postalCode, address, url, longitude, latitude)
-    
+    # put the content of the temporary data frame for the last page in the right spot in venue_data_complete 
     venue_data_complete[(i*page_size + 1) : (i*page_size + n%%page_size), ] <- venue_data
-    print("final iteration")
+    # print("final iteration")
     Sys.sleep(1/5)
   }
 }
 
 ```
 
+The final data frame containing all German venues has `nrow(venue_data_complete)` rows.
+
+```{r}
+glimpse(venue_data_complete)
+```
+
 
 # Task 5) Visualizing the extracted data
 
 ```{r}
-venue_data_complete %>% 
-  glimpse()
 
-n_non_missing <- venue_data_complete %>% 
-  na.omit() %>% 
-  nrow()
+# n_non_missing <- venue_data_complete %>% 
+#   na.omit() %>% 
+#   nrow()
 
 max_lat_de <- 55.0846
 min_lat_de <- 47.271679
