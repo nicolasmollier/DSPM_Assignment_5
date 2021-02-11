@@ -5,6 +5,10 @@ date: "2/2/2021"
 output: html_document
 ---
 
+# Declaration
+
+For this assignment, I worked together with Max Kneißler (Student ID: 4121846). The link to my project repository is https://github.com/nicolasmollier/DSPM_Assignment_5
+
 ```{r}
 rm(list = ls())
 ```
@@ -24,6 +28,11 @@ library(httr)
 library(rlist)
 ```
 
+# Task 2
+
+The default quota is 5000 API calls per day and rate limitation of 5 requests per second. Therefore, I use `Sys.Sleep(1/5)` in order to make sure that the rate limitation of 5 requests per second is not violated. Theoretically, with `Sys.Sleep(1/5)` in place between each request to the ticketmaster API, it is not possible to make more than 5 requests per second even if the pure execution time of the code that performs the request was virtually zero. In the section "Discovery API" subsection "Venue Search", query parameters that can be used are listed. The query parameters that we are going to use are `locale`, `size`, `page` and `countryCode`. 
+
+Before we can start making requests in Task 3, we need to make the API key -that we retrieved from the API Explorer and saved in the file `api_key.R`- available in our script as `tm_api_key`.
 
 ```{r API key}
 source("api_key.R")
@@ -31,11 +40,14 @@ source("api_key.R")
 
 # Task 3
 
+First of all, I define the two variables `country_code` and `page_size` for Task 3. `page_size` can be used inside API requests for the `size` parameter which enables me to extract 100 cases per request instead of 20 (default). Defining the `country_code` variable enables me to quickly adapt the code for request of venues in other countries.
+
 ```{r}
 country_code = "DE"
 page_size = 100
 ```
 
+For the first GET request, we use the `tm_api_key` as `apikey`, `country_code` set to "DE" as `ountryCode` value and `page_size` set to 100 as value for the `size` parameter. Additionally, we have to set `locale = '*'`. Otherwise, we do not get all German venues that are available and almost all longitude and latitude values are missing. Setting `locale = '*'` resolves these issues. As described we have to add /discovery/v2/venues to the root url https://app.ticketmaster.com/discovery/v2/ when performing venue searches. `Sys.Sleep(1/5)` is used after the request to make sure that we adhere to the rate limit of 5 requests per second.
 
 ```{r GET request 1}
 response <- GET(url = "https://app.ticketmaster.com/discovery/v2/venues",
@@ -43,21 +55,30 @@ response <- GET(url = "https://app.ticketmaster.com/discovery/v2/venues",
                  countryCode = country_code,
                  size = page_size,
                  locale = '*'))
-
+Sys.sleep(1/5)
 ```
 
+The functions `content()` and `fromJSON()` are used sequentially to retrieve the content that we are interested in. The resulting variable `content` is a list of three lists. One of the lists is named `_embedded`. `_embedded` contains another list called `venues`. This is where the variables that we are looking for are saved. Note, that some of the variables (`name`, `postalCode`, `url`) are vectors and can immediately be retrieved. The variables `city` and `address` are lists and the variables `longitude` and `latitude` are character variables inside a list called `location`. In order to create a data frame containing all those variables, we first access the list `_embedded` and `venues` inside the `content` object and save the result as `venues_df`. From this data frame, we only select the seven columns of interest to us and save the resulting data frame as `venues_select`. `venues_select` is a data frame where some of the variables of interest are themselves data frames due to the fact that inside the list `venues` (inside `content`) the variables `city` and `address` are lists and the variables `longitude` and `latitude` are character variables inside a list called `location`.
 
 ```{r}
 content_json <- content(response, as = "text")
 content <- fromJSON(content_json)
-venues <-content[["_embedded"]]
-venues <- venues[["venues"]]
-venues_select <- venues %>% 
+venues_df <-content[["_embedded"]][["venues"]]
+venues_select <- venues_df %>% 
   select(name, city, postalCode, address, url, location)
 glimpse(venues_select)
+```
 
+The vector variables `name`, `postalCode` and `url` can be selected directly.
+
+```{r}
 venue_data <- venues_select %>% 
   select(is.vector)
+```
+
+The other variables `ity`, `address`, `longitude` and `latitude` have to be selected by first accessing the respective column that is itself a data frame and then accessing the respective column inside that data frame. The resulting vectors are saved as columns in `venue_data`. `venue_data` has 100 rows and 7 columns. 
+
+```{r}
 venue_data["city"] <- venues_select$city[["name"]]
 venue_data["address"] <- venues_select$address[["line1"]]
 venue_data["longitude"] <- venues_select$location["longitude"]
@@ -65,7 +86,6 @@ venue_data["latitude"] <- venues_select$location["latitude"]
 
 
 venue_data %>% 
-  head(20) %>% 
   glimpse()
 ```
 
@@ -113,7 +133,6 @@ for(i in 0:(total_pages-1)){
   content_embedded <- content[["_embedded"]]
   assign(paste0("venues",i), content_embedded[["venues"]])
   venues <- content_embedded[["venues"]]
-  
   # as long as we have not reached the last page, we insert data frames 
   # with 100 cases into venue_data_complete
   if(i < (total_pages-1)){
@@ -127,8 +146,8 @@ for(i in 0:(total_pages-1)){
     venue_data <- venue_data %>% 
       select(name, city, postalCode, address, url, longitude, latitude)
     venue_data_complete[(i*page_size + 1) : ((i+1) * page_size), ] <- venue_data
-    print(i)
-    Sys.sleep(2/5)
+    print(paste("Page:", i+1, "| Progress:", scales::percent(i/total_pages), sep = " "))
+    Sys.sleep(1/5)
   # as soon as we reach the last page, the number of rows to be inserted into
   # venue_data_complete reduces to n %% 100 (the remainder of the division of
   # the total number of elements and the page size)
@@ -156,7 +175,7 @@ for(i in 0:(total_pages-1)){
     
     venue_data_complete[(i*page_size + 1) : (i*page_size + n%%page_size), ] <- venue_data
     print("final iteration")
-    Sys.sleep(2/5)
+    Sys.sleep(1/5)
   }
 }
 
@@ -191,7 +210,9 @@ ggplot() +
   geom_polygon(
     aes(x = long, y = lat, group = group), data = map_data("world", region = "Germany"),
     fill = "gray90",color = "black") +
-  geom_point(data = venue_data_complete, aes(longitude, latitude), color = "royalblue3") +
+  geom_point(data = venue_data_complete, aes(longitude, latitude), 
+             color = "royalblue3",
+             alpha = 0.5) +
   theme_void() + coord_quickmap() +
   labs(title = "Event locations across Germany", caption = "Source: ticketmaster.com") +
   theme(title = element_text(size=8, face='bold'),
@@ -217,7 +238,7 @@ response <- GET(url = "https://app.ticketmaster.com/discovery/v2/venues",
                  countryCode = country_code,
                  size = page_size,
                  locale = '*'))
-
+Sys.sleep(1/5)
 ```
 
 
@@ -275,7 +296,8 @@ for(i in 0:(total_pages-1)){
     query = list(apikey = tm_api_key,
                  countryCode = country_code,
                  size = page_size,
-                 page = i))
+                 page = i,
+                 loacle = '*'))
   content_json <- content(response, as = "text")
   content <- fromJSON(content_json)
   content_embedded <- content[["_embedded"]]
@@ -295,8 +317,8 @@ for(i in 0:(total_pages-1)){
     venue_data <- venue_data %>% 
       select(name, city, postalCode, address, url, longitude, latitude)
     venue_data_complete[(i*page_size + 1) : ((i+1) * page_size), ] <- venue_data
-    print(i)
-    Sys.sleep(2/5)
+    print(paste("Page:", i+1, "| Progress:", scales::percent(i/total_pages), sep = " "))
+    Sys.sleep(1/5)
   # as soon as we reach the last page, the number of rows to be inserted into
   # venue_data_complete reduces to n %% 100 (the remainder of the division of
   # the total number of elements and the page size)
@@ -324,7 +346,7 @@ for(i in 0:(total_pages-1)){
     
     venue_data_complete[(i*page_size + 1) : (i*page_size + n%%page_size), ] <- venue_data
     print("final iteration")
-    Sys.sleep(2/5)
+    Sys.sleep(1/5)
   }
 }
 
@@ -360,7 +382,9 @@ ggplot() +
   geom_polygon(
     aes(x = long, y = lat, group = group), data = map_data("world", region = "Belgium"),
     fill = "gray90",color = "black") +
-  geom_point(data = venue_data_complete, aes(longitude, latitude), color = "royalblue3") +
+  geom_point(data = venue_data_complete, aes(longitude, latitude), 
+             color = "royalblue3",
+             alpha = 0.5) +
   theme_void() + coord_quickmap() +
   labs(title = paste("Event locations across ", country_code), caption = "Source: ticketmaster.com") +
   theme(title = element_text(size=8, face='bold'),
