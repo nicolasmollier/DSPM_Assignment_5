@@ -16,8 +16,8 @@ rm(list = ls())
 
 ```{r Working Directory, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = "/home/nicolas/Desktop/Uni/WiSe20_21/DS400_DS_Project_Management/Assignments/Assignment_5")
-setwd("/home/nicolas/Desktop/Uni/WiSe20_21/DS400_DS_Project_Management/Assignments/Assignment_5")
+knitr::opts_knit$set(root.dir = "/Users/nicolas/Desktop/WiSe20_21/DS400_DS_Project_Management/Assignments/Assignment_5")
+setwd("/Users/nicolas/Desktop/WiSe20_21/DS400_DS_Project_Management/Assignments/Assignment_5")
 ```
 
 ```{r Packages}
@@ -396,6 +396,6 @@ ggplot() +
              alpha = 0.5) +
   theme_void() + coord_quickmap() +
   labs(title = paste("Event locations across ", country_code), caption = "Source: ticketmaster.com") +
-  theme(title = element_text(size=8, face='bold'),
+  theme(title = element_text(size=12, face='bold'),
     plot.caption = element_text(face = "italic")) 
 ```
