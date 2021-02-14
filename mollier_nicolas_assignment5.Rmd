@@ -20,7 +20,7 @@ knitr::opts_knit$set(root.dir = "/Users/nicolas/Desktop/WiSe20_21/DS400_DS_Proje
 setwd("/Users/nicolas/Desktop/WiSe20_21/DS400_DS_Project_Management/Assignments/Assignment_5")
 ```
 
-```{r Packages}
+```{r Packages, message=FALSE}
 library(tidyverse)
 library(knitr)
 library(jsonlite)
@@ -47,7 +47,7 @@ country_code <- "DE"
 page_size <- 100
 ```
 
-For the first GET request, we use the `tm_api_key` as `apikey`, `country_code` set to "DE" as `ountryCode` value and `page_size` set to 100 as value for the `size` parameter. Additionally, we have to set `locale = '*'`. Otherwise, we do not get all German venues that are available and almost all longitude and latitude values are missing. Setting `locale = '*'` resolves these issues. As described we have to add /discovery/v2/venues to the root url https://app.ticketmaster.com/discovery/v2/ when performing venue searches. `Sys.Sleep(2/5)` is used after the request to make sure that we adhere to the rate limit of 5 requests per second.
+For the first GET request, we use the `tm_api_key` as `apikey`, `country_code` set to "DE" as `countryCode` value and `page_size` set to `r nrow(page_size)` as value for the `size` parameter. Additionally, we have to set `locale = '*'`. Otherwise, we do not get all German venues that are available and almost all longitude and latitude values are missing. Setting `locale = '*'` resolves these issues. As described we have to add /discovery/v2/venues to the root url https://app.ticketmaster.com/discovery/v2/ when performing venue searches. `Sys.Sleep(2/5)` is used after the request to make sure that we adhere to the rate limit of 5 requests per second.
 
 ```{r GET request 1}
 response <- GET(url = "https://app.ticketmaster.com/discovery/v2/venues",
@@ -73,10 +73,10 @@ The vector variables `name`, `postalCode` and `url` can be selected directly.
 
 ```{r}
 venue_data <- venues_select %>% 
-  select(is.vector)
+  select(where(is.vector))
 ```
 
-The other variables `ity`, `address`, `longitude` and `latitude` have to be selected by first accessing the respective column that is itself a data frame and then accessing the respective column inside that data frame. The resulting vectors are saved as columns in `venue_data`. `venue_data` has 100 rows and 7 columns. 
+The other variables `ity`, `address`, `longitude` and `latitude` have to be selected by first accessing the respective column that is itself a data frame and then accessing the respective column inside that data frame. The resulting vectors are saved as columns in `venue_data`. `venue_data` has `r nrow(venue_data)` rows and `r ncol(venue_data)` columns. 
 
 ```{r}
 venue_data["city"] <- venues_select$city[["name"]]
@@ -92,7 +92,7 @@ venue_data %>%
 
 # Task 4
 
-A look at the list element `page` in the object `content` reveals that we extracted 100 venues out of 12238 from 123 pages with at most 100 venues each. We can extract the venues from all the pages available by looping through them. In order to do this, we write a for loop that starts with the query parameter `page` set to 0 and increases the value after each iteration until we reach the last page. Since the first page has the index 0, we need to start the iteration through all pages at `page = 0`. The parameter `locale` is set to `'*'` to make sure that we retrieve all German venues.
+A look at the list element `page` in the object `content` reveals that we extracted `r nrow(venue_data)` venues out of `r content$page$totalElements` from `r content$page$totalPages` pages with at most `r nrow(venue_data)` venues each. We can extract the venues from all the pages available by looping through them. In order to do this, we write a for loop that starts with the query parameter `page` set to 0 and increases the value after each iteration until we reach the last page. Since the first page has the index 0, we need to start the iteration through all pages at `page = 0`. The parameter `locale` is set to `'*'` to make sure that we retrieve all German venues.
 
 
 We start by extracting the total number of pages for Germany and save it as `total_pages`. The total number of venues (elements) is saved  as `n`. After that, two data frames are created. `venue_data_complete` will hold all venues from all the pages of venues in Germany. Therefore, we initialize it with variables (columns) of lengths `n`. The data frame `venue_data` is just a temporary data frame to hold the elements of the respective page in the respective iteration of the loop.
@@ -125,7 +125,7 @@ venue_data <-
   )
 ```
 
-Overall, there are `r n` venues to be retrieved from `r total_pages`. We start the iteration at page 0 and end it at page `r total_pages - 1`. In each iteration, we use the same GET request that we used above, except that now the parameter `page` is set to the respective page in each iteration. The extraction of the variables of interest from the `response` object is done in the same way as well. The if statement is needed to accommodate the fact that the last page generally does not have 100 but less elements. As long as we are not at the last page, we obtain a temporary data frame called `venue_data` with 100 rows that contains the seven variables. For the last page, the initialization of this temporary data frame `venue_data` is different, since the number of rows has to be adapted to the number of cases in the last page. We can get the necessary row number by calculating the remainder of the division of the total number of elements and the page size (here: 100) (`n %% page_size`). The result of this loop is a data frame called `venue_data_complete` that contains every German venue. Note, that I used `Sys.sleep(2/5)` instead of `Sys.sleep(2/5)`. Theoretically, with `Sys.Sleep(1/5)` in place between each request to the ticketmaster API, it is not possible to make more than 5 requests per second. However, using `Sys.Sleep(1/5)` repeatedly prompted "Spike arrest violations" when running the loop for the German venues. Using `Sys.sleep(2/5)` seems to reduce the frequency of facing such an error but it still happened from time to time, especially when I ran the code of my entire script more than once per day.
+Overall, there are `r n` venues to be retrieved from `r total_pages`. We start the iteration at page 0 and end it at page `r total_pages - 1`. In each iteration, we use the same GET request that we used above, except that now the parameter `page` is set to the respective page in each iteration. The extraction of the variables of interest from the `response` object is done in the same way as well. The if statement is needed to accommodate the fact that the last page generally does not have 100 but less elements. As long as we are not at the last page, we obtain a temporary data frame called `venue_data` with `r nrow(venue_data)` rows that contains the seven variables. For the last page, the initialization of this temporary data frame `venue_data` is different, since the number of rows has to be adapted to the number of cases in the last page. We can get the necessary row number by calculating the remainder of the division of the total number of elements and the page size (here: `r nrow(venue_data)`) (`n %% page_size`). The result of this loop is a data frame called `venue_data_complete` that contains every German venue. Note, that I used `Sys.sleep(2/5)` instead of `Sys.sleep(2/5)`. Theoretically, with `Sys.Sleep(1/5)` in place between each request to the ticketmaster API, it is not possible to make more than 5 requests per second. However, using `Sys.Sleep(1/5)` repeatedly prompted "Spike arrest violations" when running the loop for the German venues. Using `Sys.sleep(2/5)` seems to reduce the frequency of facing such an error but it still happened from time to time, especially when I ran the code of my entire script more than once per day.
 
 ```{r}
 for(i in 0:(total_pages-1)){
@@ -157,7 +157,7 @@ for(i in 0:(total_pages-1)){
     # print(paste("Page:", i+1, "| Progress:", scales::percent(i/total_pages), sep = " "))
     Sys.sleep(2/5)
   # as soon as we reach the last page, the number of rows to be inserted into
-  # venue_data_complete reduces to n %% 100 (the remainder of the division of
+  # venue_data_complete reduces to n %% page_size (the remainder of the division of
   # the total number of elements and the page size)
   } else{
     venue_data <- data.frame(
@@ -232,15 +232,15 @@ ggplot() +
 
 # Task 6) Event locations in Belgium
 
-We repeat everything that we have done previously for German venues but set the `country_code` to "GB" this time to retrieve venues in Great Britain. Another thing that we have to adapt are the extreme points to filter out those venues with location coordinates that are way outside the country borders of UK. Otherwise, the code is not changed compared to the German case. 
+We repeat everything that we have done previously for German venues but set the `country_code` to "BE" this time to retrieve venues in Belgium. Another thing that we have to adapt are the extreme points to filter out those venues with location coordinates that are way outside the country borders of Belgium. Otherwise, the code is not changed compared to the German case. 
 
 ```{r}
-country_code <- "GB"
+country_code <- "BE"
 ```
 
 
 ```{r GET request 2}
-
+Sys.sleep(4)  # safety not to avoid spike arrest violation
 response <- GET(url = "https://app.ticketmaster.com/discovery/v2/venues",
     query = list(apikey = tm_api_key,
                  countryCode = country_code,
@@ -260,7 +260,8 @@ venues_select <- venues %>%
 glimpse(venues_select)
 
 venue_data <- venues_select %>% 
-  select(is.vector)
+  select(where(is.vector))
+
 venue_data["city"] <- venues_select$city[["name"]]
 venue_data["address"] <- venues_select$address[["line1"]]
 venue_data["longitude"] <- venues_select$location["longitude"]
@@ -308,7 +309,7 @@ for(i in 0:(total_pages-1)){
                  countryCode = country_code,
                  size = page_size,
                  page = i,
-                 loacle = '*'))
+                 locale = '*'))
   content_json <- content(response, as = "text")
   content <- fromJSON(content_json)
   content_embedded <- content[["_embedded"]]
@@ -331,7 +332,7 @@ for(i in 0:(total_pages-1)){
     # print(paste("Page:", i+1, "| Progress:", scales::percent(i/total_pages), sep = " "))
     Sys.sleep(2/5)
   # as soon as we reach the last page, the number of rows to be inserted into
-  # venue_data_complete reduces to n %% 100 (the remainder of the division of
+  # venue_data_complete reduces to n %% page_size (the remainder of the division of
   # the total number of elements and the page size)
   } else{
     venue_data <- data.frame(
@@ -370,32 +371,32 @@ venue_data_complete %>%
 
 
 ```{r}
-# max_lat_be <- 51.4570
-# min_lat_be <- 49.8209
-# min_long_be <- 2.5804
-# max_long_be <- 6.4033
+max_lat_be <- 51.4570
+min_lat_be <- 49.8209
+min_long_be <- 2.5804
+max_long_be <- 6.4033
 
-max_lat_uk <- 60.85
-min_lat_uk <- 49.85
-min_long_uk <- -13.683333
-max_long_uk <- 1.766667
+# max_lat_uk <- 60.85
+# min_lat_uk <- 49.85
+# min_long_uk <- -13.683333
+# max_long_uk <- 1.766667
 
 venue_data_complete <- venue_data_complete %>% 
-  filter(longitude < max_long_uk, longitude > min_long_uk,
-         latitude < max_lat_uk, latitude > min_lat_uk)
+  filter(longitude < max_long_be, longitude > min_long_be,
+         latitude < max_lat_be, latitude > min_lat_be)
 ```
 
 
 ```{r}
 ggplot() +
   geom_polygon(
-    aes(x = long, y = lat, group = group), data = map_data("world", region = "GB"),
+    aes(x = long, y = lat, group = group), data = map_data("world", region = "Belgium"),
     fill = "gray90",color = "black") +
   geom_point(data = venue_data_complete, aes(longitude, latitude), 
              color = "royalblue3",
              alpha = 0.5) +
   theme_void() + coord_quickmap() +
-  labs(title = paste("Event locations across ", country_code), caption = "Source: ticketmaster.com") +
+  labs(title = paste("Event locations across Belgium"), caption = "Source: ticketmaster.com") +
   theme(title = element_text(size=12, face='bold'),
     plot.caption = element_text(face = "italic")) 
 ```
