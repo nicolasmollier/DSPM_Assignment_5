@@ -30,7 +30,7 @@ library(rlist)
 
 # Task 2) Ticketmaster API
 
-The default quota is 5000 API calls per day and rate limitation of 5 requests per second. Therefore, I originally used `Sys.Sleep(1/5)` in order to make sure that the rate limitation of 5 requests per second is not violated. Theoretically, with `Sys.Sleep(1/5)` in place between each request to the ticketmaster API, it is not possible to make more than 5 requests per second even if the pure execution time of the code that performs the request was virtually zero. Since using `Sys.Sleep(1/5)` repeatedly caused "Spike arrest violations", I instead used `Sys.Sleep(2/5)` which seemed to reduce the frequency of the occurrence of that error. In the section "Discovery API" subsection "Venue Search", query parameters that can be used are listed. The query parameters that we are going to use are `locale`, `size`, `page` and `countryCode`. 
+In the section "Discovery API" subsection "Venue Search", query parameters that can be used are listed. The query parameters that we are going to use are `locale`, `size`, `page` and `countryCode`. The default quota is 5000 API calls per day and rate limitation of 5 requests per second. Therefore, I originally used `Sys.Sleep(1/5)` in order to make sure that the rate limitation of 5 requests per second is not violated. Theoretically, with `Sys.Sleep(1/5)` in place between each request to the ticketmaster API, it is not possible to make more than 5 requests per second even if the pure execution time of the code that performs the request was virtually zero. Since using `Sys.Sleep(1/5)` repeatedly caused "Spike arrest violations", I instead used `Sys.Sleep(2/5)` which seemed to reduce the frequency of the occurrence of that error. Note, when a "Spike arrest violation" occurred, the response object did contain an error message but not the content about venues. Extracting the content from that response object resulted in a NULL object. Since we cannot subset a Null object based on our desired variables, we get a error message that R cannot subset columns that do not exist. Therefore, in those cases the knitting stopped. Trying to knit the document one or two times again after the "Spike arrest violation error" occurred, the code ran without problems and the HTML document was knitted. I could not figure out what caused the "Spike arrest violations" and why they seemed to occur randomly. For example, the page size used in the GET request did not eliminate the problem. Theoretically, a pause of 2/5 seconds between each request should be more than enough to prevent more than 5 requests per second.
 
 Before we can start making requests in Task 3, we need to make the API key -that we retrieved from the API Explorer and saved in the file `api_key.R`- available in our script as `tm_api_key`.
 
@@ -76,7 +76,7 @@ venue_data <- venues_select %>%
   select(where(is.vector))
 ```
 
-The other variables `ity`, `address`, `longitude` and `latitude` have to be selected by first accessing the respective column that is itself a data frame and then accessing the respective column inside that data frame. The resulting vectors are saved as columns in `venue_data`. `venue_data` has `r nrow(venue_data)` rows and `r ncol(venue_data)` columns. 
+The other variables `city`, `address`, `longitude` and `latitude` have to be selected by first accessing the respective column that is itself a data frame and then accessing the respective column inside that data frame. The resulting vectors are saved as columns in `venue_data`. `venue_data` has `r nrow(venue_data)` rows and `r ncol(venue_data)` columns. 
 
 ```{r}
 venue_data["city"] <- venues_select$city[["name"]]
@@ -230,12 +230,12 @@ ggplot() +
 ```
 
 
-# Task 6) Event locations in Great Britain
+# Task 6) Event locations in Belgium
 
-We repeat everything that we have done previously for German venues but set the `country_code` to "GB" this time to retrieve venues in GB. Another thing that we have to adapt are the extreme points to filter out those venues with location coordinates that are way outside the country borders of GB Otherwise, the code is not changed compared to the German case. 
+We repeat everything that we have done previously for German venues but set the `country_code` to "BE" this time to retrieve venues in Belgium. Another thing that we have to adapt are the extreme points to filter out those venues with location coordinates that are way outside the country borders of Belgium. Otherwise, the code is not changed compared to the German case. 
 
 ```{r}
-country_code <- "GB"
+country_code <- "BE"
 ```
 
 
@@ -371,37 +371,34 @@ venue_data_complete %>%
 
 
 ```{r}
-# max_lat_be <- 51.4570
-# min_lat_be <- 49.8209
-# min_long_be <- 2.5804
-# max_long_be <- 6.4033
 
-max_lat_uk <- 60.85
-min_lat_uk <- 49.85
-min_long_uk <- -13.683333
-max_long_uk <- 1.766667
+max_lat_be <- 51.4570
+min_lat_be <- 49.8209
+min_long_be <- 2.5804
+max_long_be <- 6.4033
 
-# max_lat_fr <- 51.083333
-# min_lat_fr <- 42.333333
-# max_long_fr <- 8.216667
-# min_long_fr <- -4.783333
+# max_lat_uk <- 60.85
+# min_lat_uk <- 49.85
+# min_long_uk <- -13.683333
+# max_long_uk <- 1.766667
+
 
 venue_data_complete <- venue_data_complete %>% 
-  filter(longitude < max_long_uk, longitude > min_long_uk,
-         latitude < max_lat_uk, latitude > min_lat_uk)
+  filter(longitude < max_long_be, longitude > min_long_be,
+         latitude < max_lat_be, latitude > min_lat_be)
 ```
 
 
 ```{r}
 ggplot() +
   geom_polygon(
-    aes(x = long, y = lat, group = group), data = map_data("world", region = "UK"),
+    aes(x = long, y = lat, group = group), data = map_data("world", region = "Belgium"),
     fill = "gray90",color = "black") +
   geom_point(data = venue_data_complete, aes(longitude, latitude), 
              color = "royalblue3",
              alpha = 0.5) +
   theme_void() + coord_quickmap() +
-  labs(title = paste("Event locations across Great Britain"), caption = "Source: ticketmaster.com") +
+  labs(title = paste("Event locations across Belgium"), caption = "Source: ticketmaster.com") +
   theme(title = element_text(size=12, face='bold'),
     plot.caption = element_text(face = "italic")) 
 ```
