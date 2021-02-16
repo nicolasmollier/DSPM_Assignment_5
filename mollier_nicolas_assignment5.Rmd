@@ -28,7 +28,7 @@ library(httr)
 library(rlist)
 ```
 
-# Task 2
+# Task 2) Ticketmaster API
 
 The default quota is 5000 API calls per day and rate limitation of 5 requests per second. Therefore, I originally used `Sys.Sleep(1/5)` in order to make sure that the rate limitation of 5 requests per second is not violated. Theoretically, with `Sys.Sleep(1/5)` in place between each request to the ticketmaster API, it is not possible to make more than 5 requests per second even if the pure execution time of the code that performs the request was virtually zero. Since using `Sys.Sleep(1/5)` repeatedly caused "Spike arrest violations", I instead used `Sys.Sleep(2/5)` which seemed to reduce the frequency of the occurrence of that error. In the section "Discovery API" subsection "Venue Search", query parameters that can be used are listed. The query parameters that we are going to use are `locale`, `size`, `page` and `countryCode`. 
 
@@ -38,7 +38,7 @@ Before we can start making requests in Task 3, we need to make the API key -that
 source("api_key.R")
 ```
 
-# Task 3
+# Task 3) First GET request for Germany
 
 First of all, I define the two variables `country_code` and `page_size` for Task 3. `page_size` can be used inside API requests for the `size` parameter which enables me to extract 100 cases per request instead of 20 (default). Defining the `country_code` variable enables me to quickly adapt the code for request of venues in other countries.
 
@@ -90,7 +90,7 @@ venue_data %>%
 ```
 
 
-# Task 4
+# Task 4) Retrieving all German venues
 
 A look at the list element `page` in the object `content` reveals that we extracted `r nrow(venue_data)` venues out of `r content$page$totalElements` from `r content$page$totalPages` pages with at most `r nrow(venue_data)` venues each. We can extract the venues from all the pages available by looping through them. In order to do this, we write a for loop that starts with the query parameter `page` set to 0 and increases the value after each iteration until we reach the last page. Since the first page has the index 0, we need to start the iteration through all pages at `page = 0`. The parameter `locale` is set to `'*'` to make sure that we retrieve all German venues.
 
@@ -196,7 +196,7 @@ glimpse(venue_data_complete)
 ```
 
 
-# Task 5) Visualizing the extracted data
+# Task 5) Visualizing the extracted German data
 
 Next, let us visualize the locations of the extracted venues. Some coordinates are outside the boundaries of the German borders. Venues with coordinates that are outside the extreme point ranges that were derived from the extreme points for Germany listed on https://en.wikipedia.org/wiki/Geography_of_Germany#Extreme_points are not included in the following map.
 
@@ -230,12 +230,12 @@ ggplot() +
 ```
 
 
-# Task 6) Event locations in Belgium
+# Task 6) Event locations in Great Britain
 
-We repeat everything that we have done previously for German venues but set the `country_code` to "BE" this time to retrieve venues in Belgium. Another thing that we have to adapt are the extreme points to filter out those venues with location coordinates that are way outside the country borders of Belgium. Otherwise, the code is not changed compared to the German case. 
+We repeat everything that we have done previously for German venues but set the `country_code` to "GB" this time to retrieve venues in GB. Another thing that we have to adapt are the extreme points to filter out those venues with location coordinates that are way outside the country borders of GB Otherwise, the code is not changed compared to the German case. 
 
 ```{r}
-country_code <- "BE"
+country_code <- "GB"
 ```
 
 
@@ -300,7 +300,7 @@ venue_data <-
   )
 ```
 
-Overall, there are `r n` venues to be retrieved from `r total_pages`.
+Overall, there are `r n` venues to be retrieved from `r total_pages` pages.
 
 ```{r}
 for(i in 0:(total_pages-1)){
@@ -371,32 +371,37 @@ venue_data_complete %>%
 
 
 ```{r}
-max_lat_be <- 51.4570
-min_lat_be <- 49.8209
-min_long_be <- 2.5804
-max_long_be <- 6.4033
+# max_lat_be <- 51.4570
+# min_lat_be <- 49.8209
+# min_long_be <- 2.5804
+# max_long_be <- 6.4033
 
-# max_lat_uk <- 60.85
-# min_lat_uk <- 49.85
-# min_long_uk <- -13.683333
-# max_long_uk <- 1.766667
+max_lat_uk <- 60.85
+min_lat_uk <- 49.85
+min_long_uk <- -13.683333
+max_long_uk <- 1.766667
+
+# max_lat_fr <- 51.083333
+# min_lat_fr <- 42.333333
+# max_long_fr <- 8.216667
+# min_long_fr <- -4.783333
 
 venue_data_complete <- venue_data_complete %>% 
-  filter(longitude < max_long_be, longitude > min_long_be,
-         latitude < max_lat_be, latitude > min_lat_be)
+  filter(longitude < max_long_uk, longitude > min_long_uk,
+         latitude < max_lat_uk, latitude > min_lat_uk)
 ```
 
 
 ```{r}
 ggplot() +
   geom_polygon(
-    aes(x = long, y = lat, group = group), data = map_data("world", region = "Belgium"),
+    aes(x = long, y = lat, group = group), data = map_data("world", region = "UK"),
     fill = "gray90",color = "black") +
   geom_point(data = venue_data_complete, aes(longitude, latitude), 
              color = "royalblue3",
              alpha = 0.5) +
   theme_void() + coord_quickmap() +
-  labs(title = paste("Event locations across Belgium"), caption = "Source: ticketmaster.com") +
+  labs(title = paste("Event locations across Great Britain"), caption = "Source: ticketmaster.com") +
   theme(title = element_text(size=12, face='bold'),
     plot.caption = element_text(face = "italic")) 
 ```
