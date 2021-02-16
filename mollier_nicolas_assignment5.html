@@ -412,7 +412,7 @@ summary {
 
 <h1 class="title toc-ignore">Assignment_5</h1>
 <h4 class="author">Nicolas Mollier</h4>
-<h4 class="date">2/2/2021</h4>
+<h4 class="date">16/2/2021</h4>
 
 </div>
 
@@ -463,7 +463,7 @@ glimpse(venues_select)</code></pre>
 <p>The vector variables <code>name</code>, <code>postalCode</code> and <code>url</code> can be selected directly.</p>
 <pre class="r"><code>venue_data &lt;- venues_select %&gt;% 
   select(where(is.vector))</code></pre>
-<p>The other variables <code>city</code>, <code>address</code>, <code>longitude</code> and <code>latitude</code> have to be selected by first accessing the respective column that is itself a data frame and then accessing the respective column inside that data frame. The resulting vectors are saved as columns in <code>venue_data</code>. <code>venue_data</code> has 100 rows and 3 columns.</p>
+<p>The other variables <code>city</code>, <code>address</code>, <code>longitude</code> and <code>latitude</code> have to be selected by first accessing the respective column that is itself a data frame and then accessing the respective column inside that data frame. The resulting vectors are saved as columns in <code>venue_data</code>.</p>
 <pre class="r"><code>venue_data[&quot;city&quot;] &lt;- venues_select$city[[&quot;name&quot;]]
 venue_data[&quot;address&quot;] &lt;- venues_select$address[[&quot;line1&quot;]]
 venue_data[&quot;longitude&quot;] &lt;- venues_select$location[&quot;longitude&quot;]
@@ -481,6 +481,7 @@ venue_data %&gt;%
 ## $ address    &lt;chr&gt; &quot;Grosse Freiheit 58&quot;, &quot;Herbert-von-Karajan-Straße 1&quot;, &quot;Alt…
 ## $ longitude  &lt;chr&gt; &quot;9.958075&quot;, &quot;13.36896&quot;, &quot;13.67471&quot;, &quot;9.1824&quot;, &quot;13.42054&quot;, …
 ## $ latitude   &lt;chr&gt; &quot;53.551885&quot;, &quot;52.51007&quot;, &quot;51.06498&quot;, &quot;48.89121&quot;, &quot;52.49945…</code></pre>
+<p><code>venue_data</code> has 100 rows and 7 columns.</p>
 </div>
 <div id="task-4-retrieving-all-german-venues" class="section level1">
 <h1>Task 4) Retrieving all German venues</h1>
@@ -511,7 +512,7 @@ venue_data &lt;-
     latitude = numeric(page_size),
     stringsAsFactors = FALSE
   )</code></pre>
-<p>Overall, there are 12238 venues to be retrieved from 123. We start the iteration at page 0 and end it at page 122. In each iteration, we use the same GET request that we used above, except that now the parameter <code>page</code> is set to the respective page in each iteration. The extraction of the variables of interest from the <code>response</code> object is done in the same way as well. The if statement is needed to accommodate the fact that the last page generally does not have 100 but less elements. As long as we are not at the last page, we obtain a temporary data frame called <code>venue_data</code> with 100 rows that contains the seven variables. For the last page, the initialization of this temporary data frame <code>venue_data</code> is different, since the number of rows has to be adapted to the number of cases in the last page. We can get the necessary row number by calculating the remainder of the division of the total number of elements and the page size (here: 100) (<code>n %% page_size</code>). The result of this loop is a data frame called <code>venue_data_complete</code> that contains every German venue. Note, that I used <code>Sys.sleep(2/5)</code> instead of <code>Sys.sleep(1/5)</code>. Theoretically, with <code>Sys.Sleep(1/5)</code> in place between each request to the ticketmaster API, it is not possible to make more than 5 requests per second. However, using <code>Sys.Sleep(1/5)</code> repeatedly prompted “Spike arrest violations” when running the loop for the German venues. Using <code>Sys.sleep(2/5)</code> seems to reduce the frequency of facing such an error but it still happened from time to time, especially when I ran the code of my entire script more than once per day.</p>
+<p>Overall, there are 12238 venues to be retrieved from 123 pages. We start the iteration at page 0 and end it at page 122. In each iteration, we use the same GET request that we used above, except that now the parameter <code>page</code> is set to the respective page in each iteration. The extraction of the variables of interest from the <code>response</code> object is done in the same way as well. The if statement is needed to accommodate the fact that the last page generally does not have 100 but less elements. As long as we are not at the last page, we obtain a temporary data frame called <code>venue_data</code> with 100 rows that contains the seven variables. For the last page, the initialization of this temporary data frame <code>venue_data</code> is different, since the number of rows has to be adapted to the number of cases in the last page. We can get the necessary row number by calculating the remainder of the division of the total number of elements and the page size (here: 100) (<code>n %% page_size</code>). The result of this loop is a data frame called <code>venue_data_complete</code> that contains every German venue. Note, that I used <code>Sys.sleep(2/5)</code> instead of <code>Sys.sleep(1/5)</code>. Theoretically, with <code>Sys.Sleep(1/5)</code> in place between each request to the ticketmaster API, it is not possible to make more than 5 requests per second. However, using <code>Sys.Sleep(1/5)</code> repeatedly prompted “Spike arrest violations” when running the loop for the German venues. Using <code>Sys.sleep(2/5)</code> seems to reduce the frequency of facing such an error but it still happened from time to time, especially when I ran the code of my entire script more than once per day.</p>
 <pre class="r"><code>for(i in 0:(total_pages-1)){
   response &lt;- GET(url = &quot;https://app.ticketmaster.com/discovery/v2/venues&quot;,
     query = list(apikey = tm_api_key,
@@ -570,7 +571,7 @@ venue_data &lt;-
     Sys.sleep(2/5)
   }
 }</code></pre>
-<p>The final data frame containing all German venues has <code>nrow(venue_data_complete)</code> rows.</p>
+<p>The final data frame containing all German venues has 12238 rows.</p>
 <pre class="r"><code>glimpse(venue_data_complete)</code></pre>
 <pre><code>## Rows: 12,238
 ## Columns: 7
@@ -737,6 +738,7 @@ venue_data &lt;-
     Sys.sleep(2/5)
   }
 }</code></pre>
+<p>The final data frame containing all venues from Belgium has 1033 rows.</p>
 <pre class="r"><code>venue_data_complete %&gt;% 
   glimpse()</code></pre>
 <pre><code>## Rows: 1,033
